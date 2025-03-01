@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2025 Progress Tracker</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f4f4f9;
+            color: #333;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        h1 {
+            font-size: 2rem;
+        }
+
+        .progress-container {
+            margin: 20px 0;
+        }
+
+        .progress-bar {
+            background-color: #ddd;
+            border-radius: 20px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .progress {
+            height: 20px;
+            background-color: #4caf50;
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .info {
+            margin: 10px 0;
+            font-weight: bold;
+        }
+
+        .activity-list {
+            margin: 20px 0;
+        }
+
+        .activity {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .activity input[type="checkbox"] {
+            margin-right: 10px;
+        }
+
+        textarea {
+            width: 100%;
+            resize: none;
+            height: 50px;
+            margin-top: 10px;
+            margin-bottom: 10px;
+        }
+
+        button {
+            background-color: #4caf50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            cursor: pointer;
+            border-radius: 5px;
+            transition: background-color 0.3s ease;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .history {
+            margin-top: 30px;
+            border-top: 2px solid #ccc;
+            padding-top: 20px;
+        }
+
+        .day-card {
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            padding: 10px;
+            margin-bottom: 10px;
+            background-color: #fff;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>2025 Progress Tracker</h1>
+        <h2>1% better Every Day</h2>
+        <p id="current-date"></p>
+        <p id="days-left"></p>
+    </header>
+
+    <div class="progress-container">
+        <div class="info">Progress: <span id="progress-percentage">0%</span></div>
+        <div class="progress-bar">
+            <div class="progress" id="progress"></div>
+        </div>
+    </div>
+
+    <div class="activity-list">
+        <h2>Today's Activities</h2>
+        <div id="activities"></div>
+        <textarea id="final-note" placeholder="Final note for today..."></textarea>
+        <button id="add-activity">Add Activity</button>
+    </div>
+
+    <div class="buttons">
+        <button id="submit-day">Submit Day</button>
+        <button id="view-history">View History</button>
+    </div>
+
+    <div class="history hidden" id="history-section">
+        <h2>History</h2>
+        <div id="history-content"></div>
+        <button id="close-history">Close History</button>
+    </div>
+
+    <script>
+        const activitiesDiv = document.getElementById("activities");
+        const progress = document.getElementById("progress");
+        const progressPercentage = document.getElementById("progress-percentage");
+        const currentDateElement = document.getElementById("current-date");
+        const daysLeftElement = document.getElementById("days-left");
+        const finalNote = document.getElementById("final-note");
+        const historySection = document.getElementById("history-section");
+        const historyContent = document.getElementById("history-content");
+
+        const addActivityBtn = document.getElementById("add-activity");
+        const submitDayBtn = document.getElementById("submit-day");
+        const viewHistoryBtn = document.getElementById("view-history");
+        const closeHistoryBtn = document.getElementById("close-history");
+
+        let activities = JSON.parse(localStorage.getItem("activities")) || [];
+        let history = JSON.parse(localStorage.getItem("history")) || [];
+        const currentDay = new Date().toDateString();
+        // new Date() creates an object for current date and time but  toDateString()is method for object Date() that made the current  date and time in human readable string
+
+        function updateDateInfo() {
+            const startOfYear = new Date(new Date().getFullYear(), 0, 1);
+            const endOfYear = new Date(new Date().getFullYear(), 11, 31);
+            const daysPassed = Math.ceil((new Date() - startOfYear) / (1000 * 60 * 60 * 24));
+            const totalDays = Math.ceil((endOfYear - startOfYear) / (1000 * 60 * 60 * 24)) + 1;
+
+            currentDateElement.textContent = `Today's Date: ${currentDay}`;
+            daysLeftElement.textContent = `Days Left in 2025: ${totalDays - daysPassed}`;
+            updateProgress(daysPassed, totalDays);
+        }
+
+        function updateProgress(completedDays, totalDays) {
+            const percentage = Math.round((completedDays / totalDays) * 100);
+            progress.style.width = `${percentage}%`; // template literals
+            progressPercentage.textContent = `${percentage}%`; 
+        }
+
+        function renderActivities() {
+            activitiesDiv.innerHTML = "";
+            activities.forEach((activity, index) => {
+                const activityDiv = document.createElement("div");
+                activityDiv.classList.add("activity");
+                activityDiv.innerHTML = `
+                    <input type="checkbox" id="activity-${index}" ${activity.completed ? "checked" : ""}>
+                    <label for="activity-${index}">${activity.name}</label>
+                    <textarea placeholder="Add note">${activity.note || ""}</textarea>
+                    <button onclick="deleteActivity(${index})">Delete</button>
+                `;
+                activitiesDiv.appendChild(activityDiv);
+
+                const checkbox = activityDiv.querySelector("input");
+                const textarea = activityDiv.querySelector("textarea");
+                checkbox.addEventListener("change", () => {
+                    activity.completed = checkbox.checked;
+                    localStorage.setItem("activities", JSON.stringify(activities));
+                });
+                textarea.addEventListener("input", () => {
+                    activity.note = textarea.value;
+                    localStorage.setItem("activities", JSON.stringify(activities));
+                });
+            });
+        }
+
+        function deleteActivity(index) {
+            activities.splice(index, 1);
+            localStorage.setItem("activities", JSON.stringify(activities));
+            renderActivities();
+        }
+
+        function submitDay() {
+            const todayData = {
+                date: currentDay,
+                activities: [...activities],
+                finalNote: finalNote.value,
+            };
+            history.push(todayData);
+            localStorage.setItem("history", JSON.stringify(history));
+            alert("Day submitted successfully!");
+            activities = [];
+            finalNote.value = "";
+            renderActivities();
+        }
+
+        function renderHistory() {
+            historyContent.innerHTML = "";
+            const daysTracked = new Set(history.map((entry) => entry.date));
+
+            const allDays = [];
+            const firstDate = new Date(new Date().getFullYear(), 0, 1);
+
+            while (firstDate <= new Date()) {
+                allDays.push(firstDate.toDateString());
+                firstDate.setDate(firstDate.getDate() + 1);
+            }
+
+            allDays.forEach((day) => {
+                const dayCard = document.createElement("div");
+                dayCard.classList.add("day-card");
+                const dayData = history.find((entry) => entry.date === day);
+
+                if (dayData) {
+                    dayCard.innerHTML = `
+                        <h3>${day}</h3>
+                        <p><strong>Activities:</strong></p>
+                        <ul>
+                            ${dayData.activities
+                                .map(
+                                    (a) =>
+                                        `<li>${a.name} - ${
+                                            a.completed ? "Completed" : "Not Completed"
+                                        } (Note: ${a.note || "No note"})</li>`
+                                )
+                                .join("")}
+                        </ul>
+                        <p><strong>Final Note:</strong> ${dayData.finalNote || "No note"}</p>
+                        <button onclick="deleteHistory('${day}')">Delete</button>
+                    `;
+                } else {
+                    dayCard.innerHTML = `<h3>${day}</h3><p>No activity submitted</p>`;
+                }
+
+                historyContent.appendChild(dayCard);
+            });
+        }
+
+        function deleteHistory(day) {
+            history = history.filter((entry) => entry.date !== day);
+            localStorage.setItem("history", JSON.stringify(history));
+            renderHistory();
+        }
+
+        addActivityBtn.addEventListener("click", () => {
+            const activityName = prompt("Enter the activity name:");
+            if (activityName) {
+                activities.push({ name: activityName, completed: false, note: "" });
+                localStorage.setItem("activities", JSON.stringify(activities));
+                renderActivities();
+            }
+        });
+
+        submitDayBtn.addEventListener("click", submitDay);
+
+        viewHistoryBtn.addEventListener("click", () => {
+            renderHistory();
+            historySection.classList.remove("hidden");
+        });
+
+        closeHistoryBtn.addEventListener("click", () => {
+            historySection.classList.add("hidden");
+        });
+
+        updateDateInfo();
+        renderActivities();
+    </script>
+</body>
+</html>
+
+
+<!-- <!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2025 Progress Tracker</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f4f4f9;
+            color: #333;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        h1 {
+            font-size: 2rem;
+        }
+
+        .progress-container {
+            margin: 20px 0;
+        }
+
+        .progress-bar {
+            background-color: #ddd;
+            border-radius: 20px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .progress {
+            height: 20px;
+            background-color: #4caf50;
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .info {
+            margin: 10px 0;
+            font-weight: bold;
+        }
+
+        .activity-list {
+            margin: 20px 0;
+        }
+
+        .activity {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .activity input[type="checkbox"] {
+            margin-right: 10px;
+        }
+
+        .buttons {
+            margin: 20px 0;
+        }
+
+        .history {
+            margin-top: 30px;
+            border-top: 2px solid #ccc;
+            padding-top: 20px;
+        }
+
+        .day-card {
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            padding: 10px;
+            margin-bottom: 10px;
+            background-color: #fff;
+        }
+
+        textarea {
+            width: 100%;
+            resize: none;
+            height: 50px;
+            margin-top: 10px;
+            margin-bottom: 10px;
+        }
+
+        button {
+            background-color: #4caf50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            cursor: pointer;
+            border-radius: 5px;
+            transition: background-color 0.3s ease;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>2025 Progress Tracker</h1>
+        <p id="current-date"></p>
+        <p id="days-left"></p>
+    </header>
+
+    <div class="progress-container">
+        <div class="info">Progress: <span id="progress-percentage">0%</span></div>
+        <div class="progress-bar">
+            <div class="progress" id="progress"></div>
+        </div>
+    </div>
+
+    <div class="activity-list">
+        <h2>Today's Activities</h2>
+        <div id="activities"></div>
+        <textarea id="final-note" placeholder="Final note for today..."></textarea>
+        <button id="add-activity">Add Activity</button>
+    </div>
+
+    <div class="buttons">
+        <button id="submit-day">Submit Day</button>
+        <button id="view-history">View History</button>
+    </div>
+
+    <div class="history hidden" id="history-section">
+        <h2>History</h2>
+        <div id="history-content"></div>
+        <button id="close-history">Close History</button>
+    </div>
+
+    <script>
+        const activitiesDiv = document.getElementById('activities');
+        const progress = document.getElementById('progress');
+        const progressPercentage = document.getElementById('progress-percentage');
+        const currentDateElement = document.getElementById('current-date');
+        const daysLeftElement = document.getElementById('days-left');
+        const finalNote = document.getElementById('final-note');
+        const historySection = document.getElementById('history-section');
+        const historyContent = document.getElementById('history-content');
+
+        const submitDayBtn = document.getElementById('submit-day');
+        const viewHistoryBtn = document.getElementById('view-history');
+        const closeHistoryBtn = document.getElementById('close-history');
+
+        const addActivityBtn = document.getElementById('add-activity');
+
+        let activities = JSON.parse(localStorage.getItem('activities')) || [];
+        let history = JSON.parse(localStorage.getItem('history')) || [];
+        let currentDay = new Date();
+
+        function updateDateInfo() {
+            const startOfYear = new Date(currentDay.getFullYear(), 0, 1);
+            const endOfYear = new Date(currentDay.getFullYear(), 11, 31);
+            const daysPassed = Math.ceil((currentDay - startOfYear) / (1000 * 60 * 60 * 24));
+            const totalDays = Math.ceil((endOfYear - startOfYear) / (1000 * 60 * 60 * 24)) + 1;
+
+            currentDateElement.textContent = `Today's Date: ${currentDay.toDateString()}`;
+            daysLeftElement.textContent = `Days Left in 2025: ${totalDays - daysPassed}`;
+            updateProgress(daysPassed, totalDays);
+        }
+
+        function updateProgress(completedDays, totalDays) {
+            const percentage = Math.round((completedDays / totalDays) * 100);
+            progress.style.width = `${percentage}%`;
+            progressPercentage.textContent = `${percentage}%`;
+        }
+
+        function renderActivities() {
+            activitiesDiv.innerHTML = '';
+            activities.forEach((activity, index) => {
+                const activityDiv = document.createElement('div');
+                activityDiv.classList.add('activity');
+                activityDiv.innerHTML = `
+                    <input type="checkbox" id="activity-${index}" ${activity.completed ? 'checked' : ''}>
+                    <label for="activity-${index}">${activity.name}</label>
+                    <button onclick="deleteActivity(${index})">Delete</button>
+                `;
+                activitiesDiv.appendChild(activityDiv);
+
+                const checkbox = activityDiv.querySelector('input');
+                checkbox.addEventListener('change', () => {
+                    activity.completed = checkbox.checked;
+                });
+            });
+        }
+
+        function deleteActivity(index) {
+            activities.splice(index, 1);
+            localStorage.setItem('activities', JSON.stringify(activities));
+            renderActivities();
+        }
+
+        function submitDay() {
+            const todayData = {
+                date: currentDay.toDateString(),
+                activities: [...activities],
+                finalNote: finalNote.value
+            };
+            history.push(todayData);
+            localStorage.setItem('history', JSON.stringify(history));
+            alert('Day submitted successfully!');
+            activities = [];
+            finalNote.value = '';
+            renderActivities();
+        }
+
+        function renderHistory() {
+            historyContent.innerHTML = '';
+            history.forEach(entry => {
+                const dayCard = document.createElement('div');
+                dayCard.classList.add('day-card');
+                dayCard.innerHTML = `
+                    <h3>${entry.date}</h3>
+                    <p><strong>Activities:</strong></p>
+                    <ul>
+                        ${entry.activities.map(a => `<li>${a.name} - ${a.completed ? 'Completed' : 'Not Completed'}</li>`).join('')}
+                    </ul>
+                    <p><strong>Final Note:</strong> ${entry.finalNote || 'No note'}</p>
+                `;
+                historyContent.appendChild(dayCard);
+            });
+        }
+
+        addActivityBtn.addEventListener('click', () => {
+            const activityName = prompt('Enter the activity name:');
+            if (activityName) {
+                activities.push({ name: activityName, completed: false });
+                localStorage.setItem('activities', JSON.stringify(activities));
+                renderActivities();
+            }
+        });
+
+        submitDayBtn.addEventListener('click', submitDay);
+
+        viewHistoryBtn.addEventListener('click', () => {
+            renderHistory();
+            historySection.classList.remove('hidden');
+        });
+
+        closeHistoryBtn.addEventListener('click', () => {
+            historySection.classList.add('hidden');
+        });
+
+        updateDateInfo();
+        renderActivities();
+    </script>
+</body>
+</html> -->
